@@ -44,8 +44,8 @@ wald.test <- function (R, r, lmdl)
   pval = pchisq(Q, df = nRest, lower.tail = F)
   
   colnames(R) = names(lmdl$coefficients)
-  cat(sprintf("H0: R theta -r = 0 \n"))
+  cat(sprintf("H0: R theta - r = 0 \n"))
   cat(sprintf("test statistic: %0.4f\tp-value: %0.4f", Q, pval))
-  cat(R)
+  # cat(R)
 }
 

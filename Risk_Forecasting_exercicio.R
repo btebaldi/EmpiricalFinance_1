@@ -1,0 +1,383 @@
+# clean old variables
+rm(list=ls())
+
+
+# Load Packages
+library(tseries)
+library(zoo)
+library(QRM)
+library(mvtnorm) # for sampling from a multivariate normal or t distribution
+library(ggplot2)
+library(rugarch)
+library(tibble)
+
+# Passo 1) Aumente a amostra (inclua mais duas acoes e acrescente os dados mais
+# recentes) 
+
+# Determine the start date and end date of our samples.
+dataIni = "2000-01-01"
+dataFim = "2018-12-31"
+
+
+# Fetch Microsoft Data (msft)
+msft <- tseries::get.hist.quote(instrument = "msft",
+                                    start = dataIni,
+                                    end = dataFim,
+                                    quote = c("Adjusted", "Vol"))
+  
+# Fetch IBM Data (ibm)
+ibm <- tseries::get.hist.quote(instrument = "ibm",
+                                start = dataIni,
+                                end = dataFim,
+                                quote = c("Adjusted", "Vol"))
+  
+# Fetch Coke Data (coke)
+coke <- tseries::get.hist.quote(instrument = "coke",
+                                  start = dataIni,
+                                  end = dataFim,
+                                  quote = c("Adjusted", "Vol"))
+  
+# Fetch Walmart Data (WMT)
+walmart <- tseries::get.hist.quote(instrument = "WMT",
+                                 start = dataIni,
+                                 end = dataFim,
+                                 quote = c("Adjusted", "Vol"))
+  
+# Calculation the return of series
+r_msft = zoo::coredata(diff(log(msft$Adjusted)))
+r_ibm  = zoo::coredata(diff(log(ibm$Adjusted)))
+r_coke = zoo::coredata(diff(log(coke$Adjusted)))
+r_wall = zoo::coredata(diff(log(walmart$Adjusted)))
+
+# merge returns in one matrix
+return_data = cbind(r_msft, r_ibm, r_coke, r_wall)
+
+# Removing variables that will no longer be used 
+rm(list = c("dataIni", "dataFim"))
+rm(list = c("msft", "ibm", "coke", "walmart"))
+rm(list = c("r_msft", "r_ibm", "r_coke", "r_wall"))
+
+
+# Drop the first 14 observations
+return_data = return_data[-c(1:14),]
+
+# Calculate new sample size
+T = nrow(return_data)
+
+# Descriptive Summary of Data
+summary(return_data)
+
+# Set Portfolio value
+value = 1000
+
+# V@R probability
+p = 0.01 
+
+# p% smallest
+op = T*p
+
+
+# Passo 2) Calcule o V@R(1%) de um portifólio com essas 4 acoes.
+
+# Set Portfolio weights
+w = matrix(c(0.25, 0.25, 0.25, 0.25), nrow = 4, ncol = 1)
+  
+# Portfolio returns
+r_port = return_data %*% w
+
+# Portfolio volatility
+sigma_port = sqrt(t(w) %*% cov(return_data) %*% w)
+
+  
+
+# V@R assuming Historical Simulation
+# Sort the portifolio
+r_port.sorted = sort(r_port)
+
+# Portifolio V@R (Historical Simulation)
+VaR_port.HS = -r_port.sorted[op] * value
+print(VaR_port.HS)
+  
+# Univariate Expected shortfall for Portfolio
+ES_port.HS = - mean(r_port.sorted[1:op]) * value
+print(ES_port.HS)
+
+# V@R assuming Normal distribution
+# compute $\sigma$*$F^{-1}(p)$*Value
+VaR_port.norm = -sigma_port *qnorm(p)*value
+VaR_port.norm = as.numeric(VaR_port.norm)
+print(VaR_port.norm)
+  
+# V@R assuming Student-t distribution for the portifolio returns
+# obs: first we need to estimate the degrees of freedom of the distribution
+# scale the returns
+sc_r_port = r_port *100
+  
+# estimate the distribution parameters
+res_port = QRM::fit.st(sc_r_port)
+  
+# rescale the volatility
+sigma_sc_r_port = res_port$par.ests["sigma"]/100
+  
+# extract the degrees of freedom
+nu_sc_r_port = res_port$par.ests[1]
+  
+# calculates the V@R
+VaR_port.tstd = -sigma_sc_r_port * qt(df=nu_sc_r_port, p=p)*value
+print(VaR_port.tstd)
+  
+# Remove auxiliary variables
+rm(list = c("res_port","sc_r_port", "sigma_sc_r_port", "nu_sc_r_port", "r_port.sorted"))
+
+# V@R assuming multivariate Student-t distribution for the 
+# portifolio assets
+
+# Fitting a multivariate Student-t distribution
+fit <- QRM::fit.mst(return_data, method = "BFGS")
+
+# Portfolio multivariate Student-t V@R
+sigma_port.M_tstd = sqrt(t(w) %*% fit$covariance %*%w)
+VaR_port.M_tstd = - sigma_port.M_tstd * qt(p=p, df=fit$df) * value
+VaR_port.M_tstd = as.numeric(VaR_port.M_tstd)
+print(VaR_port.M_tstd)
+  
+# Remove unused variables
+rm(list = c("fit", "sigma_port.M_tstd"))
+
+# Histogram of log returns of the portifolio and Normal distribution 
+
+# density curve
+d <- density(r_port)
+# return table and density table (needed for ggplot)
+tb_port = tibble(ret = r_port)
+tb_port.density = tibble(x = d$x, y=d$y)
+
+# Histogram plot
+ggplot(data=tb_port, aes(tb_port$ret)) + 
+  geom_histogram(aes(y=..density..), 
+                 fill="black", 
+                 alpha = .5,
+                 bins = 50) +
+  geom_line(aes(y = dnorm(tb_port$ret, mean(tb_port$ret), sd(tb_port$ret)),
+                colour = "Normal"), size = 0.8) +
+  geom_line(data = tb_port.density,
+            aes(x = x, y = y, colour = "Kernel"),
+            size = 0.8) +
+  scale_colour_manual(values=c("red","blue")) +
+  labs(title= "Histogram", # Title
+       subtitle="Portifolio Histogram and Normal distribution", # Subtitle
+       caption=NULL, # Caption
+       y="Density", 
+       x='Retuns',
+       color=NULL)
+
+# remove unused variables
+rm(list = c("d", "tb_port", "tb_port.density"))
+
+
+# Expected shortfall for Portfolio with Normal distribution
+ES_port.normal = sigma_port*dnorm(qnorm(p))/p*value
+ES_port.normal = as.numeric(ES_port.normal)
+print(ES_port.normal)
+
+
+# Movind Average V@R for portfolio 
+
+# Initialize the moving average object
+VaR_port.MA <- rep(NA, length(r_port))
+
+# RiskMetrics: lambda = 0.94 and r = 0
+lambda=0.94;
+
+# Window: 20 days
+WE=20
+for (t in seq(WE+1,length(r_port))){
+  t1=t-WE+1
+  window = r_port[t1:t] # estimation window
+  sigma=sd(window)
+  VaR.MA = -sigma * qnorm(p) * value
+  VaR_port.MA[t]=VaR.MA
+}
+
+# remove unused variables
+rm(list = c("WE", "t", "t1", "window", "sigma", "VaR.MA"))
+
+
+# MA normal VaR and VaR(1%)
+
+# Create a table with VaR_port.MA and VaR_port.norm
+VaR_port.table = tibble(day = 1:length(VaR_port.MA), VaR_MA = VaR_port.MA, VaR_Norm = VaR_port.norm)
+
+# Plot the graphic
+ggplot(VaR_port.table) + 
+  geom_line(aes(x=day, y=VaR_MA, colour="MA(20)")) +
+  geom_line(aes(x=day, y=VaR_Norm, colour="Normal"), linetype = "dashed") +
+  scale_colour_manual(values=c("black","red")) +
+  labs(title= "V@R for the Portifolio", # Title
+       subtitle="V@R-MA(20) and V@R-Normal(1%)", # Subtitle
+       caption=NULL, # Caption
+       y=NULL, 
+       x=NULL,
+       color=NULL)
+
+
+# Estiates a Exponential weighted moving average model VaR for Portfolio 
+
+# Initialize the EWMA object
+VaR_port.EWMA <- rep(NA,length(r_port))
+
+# Covariance matrix of the portifolio
+s = cov(return_data)
+
+for (t in seq(2,length(r_port))){
+  s=lambda*s+(1-lambda)*return_data[t-1,]%*%t(return_data[t-1,])
+  sigma=sqrt(t(w)%*%s%*%w)
+  VaR_port.EWMA[t]=-sigma*qnorm(p)*value
+}
+
+# remove unused variables
+rm(list = c("t", "s", "sigma"))
+
+# Add the V@R estimatives to the table
+VaR_port.table$VaR_EWMA = VaR_port.EWMA
+
+ggplot(VaR_port.table) + 
+  geom_line(aes(x=day, y=VaR_EWMA, colour="EWMA")) +
+  geom_line(aes(x=day, y=VaR_Norm, colour="Normal"), linetype = "dashed") +
+  scale_colour_manual(values=c("black","red")) +
+  labs(title= "V@R for the Portifolio", # Title
+       subtitle="V@R-EWMA and V@R-Normal(1%)", # Subtitle
+       caption=NULL, # Caption
+       y=NULL, 
+       x=NULL,
+       color=NULL)
+
+
+
+# Passo 3) Experimente vários modelos garch, mas escolha um. Justifique a escolha
+# VaR9_GARCH_msft<-rep(NA,length(r_msft))
+# VaR9_GJR_msft<-rep(NA,length(r_msft))
+
+
+# Especifica ARCH(1) com Distribuicao Normal
+spec_arch = rugarch::ugarchspec(variance.model=list(model="sGARCH",garchOrder = c(1, 0)),
+                                mean.model=list(armaOrder=c(0,0)),
+                                distribution.model = "norm")
+
+# Especifica GARCH(1,1) com Distribuicao Normal
+spec_garch = rugarch::ugarchspec(variance.model = list(model="sGARCH", garchOrder = c(1, 1)),
+                                 mean.model = list( armaOrder = c(0,0), include.mean = FALSE),
+                                 distribution.model = "norm")
+
+
+# Especifica EGARCH(1,1) com Distribuicao Normal
+spec_egarch = ugarchspec(variance.model=list(model="eGARCH",garchOrder = c(1, 1)),
+                        mean.model=list(armaOrder=c(0,0)),
+                        distribution.model = "norm")
+
+
+# Especifica GjrGARCH(1,1) com Distribuicao Normal
+spec_gjrgarch = ugarchspec(variance.model=list(model="gjrGARCH", garchOrder = c(1, 1)),
+                   mean.model=list(armaOrder=c(0,0)),
+                   distribution.model = "norm")
+
+# Fit the specified models
+fit_arch = ugarchfit(spec = spec_arch, data = r_port)
+fit_garch = ugarchfit(spec = spec_garch, data = r_port)
+fit_egarch = ugarchfit(spec = spec_egarch, data = r_port)
+fit_gjr = ugarchfit(spec = spec_gjrgarch, data = r_port)
+
+
+# Determines the information criteria of the models
+rugarch::infocriteria(fit_arch)
+rugarch::infocriteria(fit_garch)
+rugarch::infocriteria(fit_egarch)
+rugarch::infocriteria(fit_gjr)
+
+# We must choose the best model, for that we will use the Bayes Information criteria
+# (Although eGarch and Garch models can't be directly compared due to 
+# having different dependent variables on the volatility equation, we will disregard
+# this and use the Bayes Information criteria for model selection)
+# arch      - Bayes        -6.103389
+# garch     - Bayes        -6.288601
+# e-garch   - Bayes        -6.305992
+# Gjr-garch - Bayes        -6.303335
+# 
+# By the BIC we choose the e-garch model.
+
+
+# Copute the volatility of the distributions
+fit_arch.sigma = rugarch::sigma(fit_arch)
+fit_garch.sigma = rugarch::sigma(fit_garch)
+fit_egarch.sigma = rugarch::sigma(fit_egarch)
+fit_gjr.sigma = rugarch::sigma(fit_gjr)
+
+# Initialize a vector of VAR for each garch model
+VaR_port.arch <- rep(NA,length(r_port))
+VaR_port.garch <- rep(NA,length(r_port))
+VaR_port.egarch <- rep(NA,length(r_port))
+VaR_port.gjrgarch <- rep(NA,length(r_port))
+
+# Compute the VaR for each Garch model
+for (t in seq(2,length(r_port))){
+  VaR_port.arch[t]     = -fit_arch.sigma[t]*qnorm(p)*value
+  VaR_port.garch[t]    = -fit_garch.sigma[t]*qnorm(p)*value
+  VaR_port.egarch[t]   = -fit_egarch.sigma[t]*qnorm(p)*value
+  VaR_port.gjrgarch[t] = -fit_gjr.sigma[t]*qnorm(p)*value
+}
+
+# Add the V@R estimatives for the Garch models to the table
+VaR_port.table$VaR_ARCH = VaR_port.arch
+VaR_port.table$VaR_GARCH = VaR_port.garch
+VaR_port.table$VaR_EGARCH = VaR_port.egarch
+VaR_port.table$VaR_GjrGARCH = VaR_port.gjrgarch
+
+# Plot the graphic for each V@R estimative
+ggplot(VaR_port.table) + 
+  geom_line(aes(x=day, y=VaR_ARCH, colour="ARCH")) +
+  geom_line(aes(x=day, y=VaR_Norm, colour="Normal"), linetype = "dashed") +
+  scale_colour_manual(values=c("black","red")) +
+  labs(title= "V@R for the Portifolio", # Title
+       subtitle="V@R ARCH and V@R-Normal(1%)", # Subtitle
+       caption=NULL, # Caption
+       y=NULL, 
+       x=NULL,
+       color=NULL)
+
+
+ggplot(VaR_port.table) + 
+  geom_line(aes(x=day, y=VaR_GARCH, colour="GARCH")) +
+  geom_line(aes(x=day, y=VaR_Norm, colour="Normal"), linetype = "dashed") +
+  scale_colour_manual(values=c("black","red")) +
+  labs(title= "V@R for the Portifolio", # Title
+       subtitle="V@R GARCH and V@R-Normal(1%)", # Subtitle
+       caption=NULL, # Caption
+       y=NULL, 
+       x=NULL,
+       color=NULL)
+
+ggplot(VaR_port.table) + 
+  geom_line(aes(x=day, y=VaR_EGARCH, colour="e-GARCH")) +
+  geom_line(aes(x=day, y=VaR_Norm, colour="Normal"), linetype = "dashed") +
+  scale_colour_manual(values=c("black","red")) +
+  labs(title= "V@R for the Portifolio", # Title
+       subtitle="V@R e-GARCH and V@R-Normal(1%)", # Subtitle
+       caption=NULL, # Caption
+       y=NULL, 
+       x=NULL,
+       color=NULL)
+
+
+ggplot(VaR_port.table) + 
+  geom_line(aes(x=day, y=VaR_GjrGARCH, colour="Gjr-GARCH")) +
+  geom_line(aes(x=day, y=VaR_Norm, colour="Normal"), linetype = "dashed") +
+  scale_colour_manual(values=c("black","red")) +
+  labs(title= "V@R for the Portifolio", # Title
+       subtitle="V@R Gjr-GARCH and V@R-Normal(1%)", # Subtitle
+       caption=NULL, # Caption
+       y=NULL, 
+       x=NULL,
+       color=NULL)
+
+
+

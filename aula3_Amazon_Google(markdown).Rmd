@@ -1,0 +1,310 @@
+---
+title: "Aula 3"
+author: "Bruno Tebaldi de Queiroz Barbosa"
+date: "2019-08-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Setup
+
+```{r CleanUp}
+# limpeza de variaveis antigas
+rm(list=ls())
+
+```
+
+```{r Loading, message=FALSE}
+# muda diretório para MCF2019 você deve mudar patra o diretório local no seu computador 
+ # setwd("C:/Users/pedro.valls/Dropbox/MCF2019/Vol_Multivariada")
+
+# Soures
+source("./ggplot_corr.R")
+
+# Pacotes
+
+load_package<-function(x){
+  x<-as.character(match.call()[[2]])
+  if (!require(x,character.only=TRUE)){
+    install.packages(pkgs=x,repos="http://cran.r-project.org")
+  }
+  require(x,character.only=TRUE)
+}
+
+# load_package('openxlsx')
+load_package('readxl')
+load_package('ggplot2')
+load_package('cowplot')
+load_package('dplyr')
+
+
+load_package('xts')
+# load_package('class')
+# load_package('zoo')
+# load_package('fBasics')
+load_package('qrmtools')
+# load_package('fDMA')
+load_package('TSA')
+# load_package('roll')
+# load_package('MTS')
+# load_package('forecast')
+# load_package('fGarch')
+# load_package('rugarch')
+# load_package('rmgarch')
+# load_package('graphics')
+# load_package('ccgarch2')
+```
+
+## Abrindo os dados
+Carregando dados da Amazon e Google a partir de um arquivo do Excel.
+
+```{r Data}
+dados <- read_excel("amzn-goog.xlsx", 
+    col_types = c("date", "numeric", "numeric"))
+
+dados.xts <- xts::xts(dados[,-1], order.by = as.Date(dados$Data))
+```
+
+## Calcula os retornos compostos 
+
+```{r retorno}
+# calcula os retornos compostos
+dados.ret = qrmtools::returns(dados.xts, method=c("logarithmic"))
+head(dados.ret)
+
+dados.ret.per = dados.ret*100
+
+autoplot(dados.ret.per, geom = "line")
+```
+
+## Extração dos dados
+
+```{r Series}
+ggplot.corr(dados.ret$AMZN, large.sample.size = F)
+
+# TT=dim(y_goog)[1]
+
+```
+
+## FAC e FACP para as séries individuais
+
+```{r FAC_retornos}
+##
+# FAc e FACP para as séries individuais
+#
+par(mfrow=c(1,2))
+acf(dados.ret$AMZN)
+pacf(dados.ret$AMZN)
+##
+# FAc e FACP para as séries individuais
+#
+par(mfrow=c(1,2))
+acf(dados.ret$GOOG)
+pacf(dados.ret$GOOG)
+
+##
+# correlação cruzada
+##
+par(mfrow=c(1,1))
+acf(dados.ret, ylab="correlação cruzada")
+
+```
+
+## FAC e FACP para o quadrado das séries individuais
+
+```{r FAC_quadrados}
+# define os retornos ao quadrado
+dados.ret$AMZN_sq = dados.ret$AMZN^2
+dados.ret$GOOG_sq = dados.ret$GOOG^2
+
+
+# FAc e FACP para o quadrado da serie Amazon
+par(mfrow=c(1,2))
+acf(dados.ret$AMZN_sq)
+pacf(dados.ret$AMZN_sq)
+
+# FAc e FACP para o quadrado da serie Google
+par(mfrow=c(1,2))
+acf(dados.ret$GOOG_sq)
+pacf(dados.ret$GOOG_sq)
+
+# correlação cruzada entre o quadrado da Amazon e o quadrado do Google
+par(mfrow=c(1,1))
+acf(dados.ret[, c("AMZN_sq", "GOOG_sq")],ylab="correlação cruzada")
+
+```
+
+## Matriz de covariância
+cria matriz para salvar a matriz de covariância em cada instante  de tempo t
+
+```{r Matrix}
+TT = nrow(dados.ret)
+
+y_double = dados.ret[, c("AMZN", "GOOG")] #%>% dplyr::select(AMZN)
+
+##
+# cria matriz para salvar a matriz de covariância em cada instante  de tempo t
+#
+EWMA = matrix(nrow=TT,ncol=3)
+
+##
+# fixa o lambda em 0.94
+##
+lambda=0.94
+S=cov(y_double)
+
+EWMA[1,] = c(S)[c(1,4,2)]                              # extract var and covar
+for (i in 2:dim(y_double)[1]){
+  S = lambda*S+(1-lambda)*  t(y_double[i-1,]) %*% (y_double[i-1,])
+  EWMA[i,] = c(S)[c(1,4,2)]
+}
+EWMArho = EWMA[,3]/sqrt(EWMA[,1]*EWMA[,2])             # calculate correlations
+print(head(EWMArho))
+print(tail(EWMArho))
+##
+# gráfico da correlação entre IBOV e SP500
+
+# DESCOMENTAR AQUI
+# plot(Data[-1],EWMArho,type='l',main='Correlação entre IBOV e SP500 usando EWMA')
+
+##
+# Estima o parâmetro lambda
+#
+
+
+# =>>>>>>>>>>>>>m3=EWMAvol(y_double,-0.1)
+# 
+# ##
+# # reestima o lambda ótimo 
+# #
+# lambda1=m3$lambda
+# S=cov(y_double)
+# EWMA[1,] = c(S)[c(1,4,2)]                              # extract var and covar
+# for (i in 2:dim(y_double)[1]){
+#   S = lambda1*S+(1-lambda1)*  t(y_double[i-1,]) %*% (y_double[i-1,])
+#   EWMA[i,] = c(S)[c(1,4,2)]
+# }
+# EWMArho_ot = EWMA[,3]/sqrt(EWMA[,1]*EWMA[,2])             # calculate correlations
+# print(head(EWMArho_ot))
+# print(tail(EWMArho_ot))
+# # gráfico da correlação entre IBOV e SP500
+# plot(Data[-1],EWMArho_ot,type='l',main='Corr entre IBOV e SP500 usando EWMA com lambda ótimo')
+
+```
+
+## Estimando um modelo BEKK(1,1) para IBOV e SP500
+O modelo BEKK não apresentou resultados.
+Devido a demora de execução o procedimento BEKK será comentado.
+
+
+```{r BEKK}
+##
+# Estimando um modelo BEKK(1,1) para IBOV e SP500
+#
+
+# fit.bekk.mts_ibov_sp500<-BEKK11(y_double)
+
+```
+
+## Estimando GOGARCH
+
+```{r GOGARCH}
+##
+##
+# estimação do GOGARCH
+##
+
+# spec = gogarchspec(mean.model = list(armaOrder = c(0, 0),
+#                                      include.mean =FALSE),
+#                    variance.model = list(model = "sGARCH",
+#                                          garchOrder = c(1,1)) ,
+#                    distribution.model =  "mvnorm"
+# )
+# fit = gogarchfit(spec = spec, data = y_double)
+# show(fit)
+
+
+```
+
+## Estimando um modelo CCC
+
+
+```{r CCC}
+##
+# Estimar um modelo CCC
+##
+ndim <- 2
+nobs <- TT
+
+## Setting parameters in the DCC part
+a <- 0.05
+b <- 0.8
+
+## Setting a correlation matrix
+R <- diag(0, ndim)
+R[lower.tri(R)] <- c(0.8)
+R <- R + t(R)
+diag(R) <- 1
+
+## setting parameters in the GARCH part
+a0 <- c(0.05,  0.1)
+A <- matrix(c(0.06, 0.0, 0.07, 0.08), 
+            ndim, ndim)
+B <- matrix(c(0.75, 0.03, 0.001, 0.81), 
+            ndim, ndim)
+
+## Simulating data
+# sim.data <- simulateCCC(R, a0, diag(diag(A)), diag(diag(B)), nobs)
+
+## Estimating a CCC model
+# garch_ccc <- estimateCCC(inia=a0, iniA=diag(diag(A)), iniB=diag(diag(B)),
+#                         data=y_double, model="diagonal")
+
+## Summarizing the results
+# summary_garch_ccc <- summary(garch_ccc)
+
+## Plotting items
+#plot(garch_ccc, item="correlation")   # this returns an error since correlation is constant
+#plot(garch_ccc, item="volatility")    # for volatility (square root of conditional variance)
+#plot(garch_ccc, item="std.residuals") # for standardized residuals
+# plot(garch_ccc, item="return")        # for return (original data)
+
+
+```
+
+## Estimando um modelo DCC
+
+
+```{r DCC}
+
+##
+# DCC
+##
+
+# xspec = ugarchspec(mean.model = list(armaOrder = c(0, 0), include.mean = FALSE))
+# uspec = multispec(replicate(2, xspec))
+# spec = dccspec(uspec = uspec, dccOrder = c(1, 1), distribution = 'mvnorm')
+# res = dccfit(spec, data = y_double)
+# H=res@mfit$H
+# DCCrho=vector(length=dim(y_double)[1])
+# for(i in 1:dim(y_double)[1]){
+#   DCCrho[i] =  H[1,2,i]/sqrt(H[1,1,i]*H[2,2,i])
+# }
+
+##
+# Gráfico da Correlação usando o DCC
+##
+# plot(Data[-1],DCCrho,type='l',main='Corr entre IBOV e SP500 usando DCC')
+
+```
+
+
+
+```{r detach}
+
+# Desconecta a base de dados
+# detach(dados)
+```

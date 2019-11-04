@@ -1,15 +1,19 @@
 # Limpeza de variaveis e graficos antigos
 rm(list = ls())
-graphics.off()
 
 # Bibliotecas utilizadas
 library(dplyr)
 library(xts)
 library(dlm)
 library(ggplot2)
+# library(quantmod)
+library(ggExtra)
+library(cowplot)
 
 # carrega banco de dados
 load("./Ibovespa.RData")
+
+summary(Ibov.data)
 
 # transforma em objeto xts (desnecessario???)
 # Ibov.xts <- xts(Ibov.data[,-1], order.by=Ibov.data$Date)
@@ -25,7 +29,7 @@ fn <- function(params){
 }
 
 # Determina qual a seria que sera utilizada para o local level model
-y <- d$Close
+y <- Ibov.data$AdjClose
   
 # chute iniicial da variancia
 a0 <- log(var(y, na.rm = T))
@@ -58,30 +62,25 @@ mu <- dropFirst(smoothed$s)
 # res <- residuals(filtered,sd=F)
 
 # Adiciona serie de nivel local a base de dados
-d$mu = mu
+Ibov.data$mu = mu
 
 # Preenche os dados faltantes
-d[is.na(d$Close), "AdjClose"]
+Ibov.data[is.na(Ibov.data$Close), "AdjClose"] = mu[is.na(Ibov.data$Close)]
 
-ggplot(d, aes(x=1:nrow(d))) +
-  geom_line(aes(y=Open), colour= "red") +
-  geom_line(aes(y=mu), colour= "black")
+g.caption = sprintf("Bovespa Index from %s, to %s", min(Ibov.data$Date), max(Ibov.data$Date))
 
+ggplot(Ibov.data, aes(x = Date)) + 
+  geom_line(aes(y=AdjClose)) + 
+  # geom_line(aes(y=Volume), colour = "Red")
+  labs(title = "Bovespa Index",
+       caption = g.caption,
+       y = "Close",
+       x = NULL)
 
+# p2 <- ggplot(Ibov.data, aes(Date, Volume)) + 
+#   geom_line(colour = "Red")
+# 
+# 
+# plot_grid(p1, p2, label_size = 12, nrow = 2, ncol = 1)
 
-
-d1 = y
-d1[is.na(dados3_2018$IBOV )] = mu[is.na(dados3_2018$IBOV)]
-write.table(d1, "myIBOV.txt", sep="\t")
-
-
-
-par(mfrow=c(1,1))
-temp <- window(cbind(logNorFatalities.ts,mu))
-plot(temp , plot.type="single" , col =c("black","blue"),lty=c(1,2),
-     xlab="",ylab = "log KSI")
-legend("topright",leg = c("log UK drivers KSI"," stochastic level"),
-       cex = 0.7, lty = c(1, 2),
-       col = c("darkgrey","blue"),pch=c(3,NA),bty = "y", horiz = T)
-
-
+save(Ibov.data, file = "Ibovespa_SemBuracao.RData")

@@ -1,4 +1,6 @@
 ggplot_Acf_Pacf <- function(x){
+  require(tibble)
+  
   conf.level <- 0.95
   n = length(x)
   ciline <- qnorm((1 - conf.level)/2)/sqrt(n)

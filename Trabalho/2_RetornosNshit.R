@@ -137,7 +137,7 @@ mdl.EWMA.sstd = ugarchspec(mean.model=list(armaOrder=c(0,0), include.mean=TRUE),
                            distribution.model="sstd", fixed.pars=list(omega=0))
 
 
-# apArch
+# apArch(1,1)
 # Especifica apArch(1,1) com Distribuicao normal
 spec = ugarchspec(mean.model=list(armaOrder=c(0,0)),
                   variance.model=list(model="apARCH"), garchOrder = c(1,1),

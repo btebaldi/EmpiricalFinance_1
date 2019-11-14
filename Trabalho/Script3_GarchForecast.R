@@ -71,8 +71,13 @@ mdl$aic
 cat(sprintf("ARMA(1,1) %7.2f\nARMA(1,0) %7.2f\nARMA(0,1) %7.2f\nARMA(0,0) %7.2f",
             mdl.ARMA$aic, mdl.AR$aic, mdl.ARMA$aic, mdl$aic))
 
+# Cocnlusao: o modelo ARMA(0,0) sera utilizado para modelagem dos retornos
+# remove os modelos da memoria
+rm(list = c("mdl.ARMA", "mdl.AR", "mdl.MA", "mdl"))
 
-# Fit GARCH MODELS
+# *************** GARCH MODELS ***************
+
+# Declara lista que contera todos os modelos
 models = list()
 
 # ARCH(1)
@@ -151,84 +156,63 @@ models$apArch.sstd = ugarchspec(mean.model=list(armaOrder=c(0,0)),
 # Faz a selecao dos dados para estimação (< 2013)
 Ibov.data.InSample = Ibov.data %>% dplyr::filter(Date < "2013-01-01")
 
+# determina a serie como xts
 r_ibov.xts = xts::xts(Ibov.data.InSample$r_ibov, order.by = Ibov.data.InSample$Date)
-# ForecastWindow1 = nrow(Ibov.data) - nrow(Ibov.data.InSample)
-
 
 # Fitted list
+# fit: Vetor do tipo lista que tera o fit para cada modelo listado
 fit = vector(mode = "list", length = length(models))
 names(fit) = names(models)
 
-# Fit the sample 
+# Fit the sample: Para cada modelo faz a estimação "in sample"
 for (i in 1:length(models)) {
   fit[[i]] = ugarchfit(data = r_ibov.xts, spec = models[[i]])
 }
 
-# Fit on sample data as a hole no forecasting
-# fit$arch.norm = ugarchfit(data = r_ibov.xts, spec = mdl.arch.norm)
-# fit$arch.sstd = ugarchfit(data = r_ibov.xts, spec = mdl.arch.sstd)
-# fit$garch.norm = ugarchfit(data = r_ibov.xts, spec = mdl.garch.norm)
-# fit$garch.sstd = ugarchfit(data = r_ibov.xts, spec = mdl.garch.sstd)
-# fit$eGarch.norm = ugarchfit(data = r_ibov.xts, spec = mdl.eGarch.norm)
-# fit$eGarch.sstd = ugarchfit(data = r_ibov.xts, spec = mdl.eGarch.sstd)
-# fit$gjrGarch.norm = ugarchfit(data = r_ibov.xts, spec = mdl.gjrGarch.norm)
-# fit$gjrGarch.sstd = ugarchfit(data = r_ibov.xts, spec = mdl.gjrGarch.sstd)
-# fit$EWMA.norm = ugarchfit(data = r_ibov.xts, spec = mdl.EWMA.norm)
-# fit$EWMA.sstd = ugarchfit(data = r_ibov.xts, spec = mdl.EWMA.sstd)
-# fit$apArch.norm = ugarchfit(data = r_ibov.xts, spec = mdl.apArch.norm)
-# fit$apArch.sstd = ugarchfit(data = r_ibov.xts, spec = mdl.apArch.sstd)
-
 # Imprime os graficos dos fits.
 for (i in 1:length(fit)) {
-  p1 = ggplot(Ibov.data.InSample, aes(x=Date)) +
+  modelSpec = rugarch::getspec(fit[[i]])
+  
+  g.subtitle = sprintf("Model: %s - Dist.: %s", modelSpec@model$modeldesc$vmodel,
+                       modelSpec@model$modeldesc$distribution)
+  
+  p1 =   ggplot(Ibov.data.InSample, aes(x=Date)) +
     geom_line(aes(y = r_ibov), colour =  "grey") +
     geom_line(aes(y = sigma(fit[[i]])), colour =  "blue") +
     geom_line(aes(y = -sigma(fit[[i]])), colour =  "blue") +
-    theme_bw()  
+    theme_bw() + 
+    labs(title = "Bovespa Index volatility",
+         subtitle = g.subtitle,
+         caption = g.caption,
+         y = NULL,
+         x = NULL)
   
-  ggplot2::ggsave(paste(i, "Returns.png", sep = "_"), plot = p1)
+  
+  ggplot2::ggsave(sprintf("Returns_%d_%s.png", i, names(fit[i])),
+                  plot = p1,
+                  device = "png", path = "./Trabalho/Plots/",
+                  scale = 1.5, width = 6, height = 3, units = "in", dpi = 72)
+  
 }
-rm(list = c("p1"))
-# 
-# 
-# ggplot(Ibov.data.InSample, aes(x=Date)) +
-#   geom_line(aes(y = r_ibov), colour =  "grey") +
-#   geom_line(aes(y = sigma(fit.garch.norm)), colour =  "blue") +
-#   geom_line(aes(y = -sigma(fit.garch.norm)), colour =  "blue") +
-#   theme_bw()
-# 
-# ggplot(Ibov.data.InSample, aes(x=Date)) +
-#   geom_line(aes(y = r_ibov), colour =  "grey") +
-#   geom_line(aes(y = sigma(fit.eGarch.norm)), colour =  "blue") +
-#   geom_line(aes(y = -sigma(fit.eGarch.norm)), colour =  "blue") +
-#   theme_bw()
-# 
-# ggplot(Ibov.data.InSample, aes(x=Date)) +
-#   geom_line(aes(y = r_ibov), colour =  "grey") +
-#   geom_line(aes(y = sigma(fit.gjrGarch.norm)), colour =  "blue") +
-#   geom_line(aes(y = -sigma(fit.gjrGarch.norm)), colour =  "blue") +
-#   theme_bw()
-# 
-# ggplot(Ibov.data.InSample, aes(x=Date)) +
-#   geom_line(aes(y = r_ibov), colour =  "grey") +
-#   geom_line(aes(y = sigma(fit.EWMA.norm)), colour =  "blue") +
-#   geom_line(aes(y = -sigma(fit.EWMA.norm)), colour =  "blue") +
-#   theme_bw()
-# 
-# ggplot(Ibov.data.InSample, aes(x=Date)) +
-#   geom_line(aes(y = r_ibov), colour =  "grey") +
-#   geom_line(aes(y = sigma(fit.apArch.norm)), colour =  "blue") +
-#   geom_line(aes(y = -sigma(fit.apArch.norm)), colour =  "blue") +
-#   theme_bw()
 
+#  remove componentes graficos que nao serao mais utilizados
+rm(list = c("p1", "g.subtitle", "modelSpec"))
+
+
+# Vetor com o nome de cada modelo
 Models = c("ARCH Norm", "ARCH Sstd", "GARCH Norm", "GARCH Sstd", "E-GARCH Norm", "E-GARCH Sstd", 
            "Gjr-Garch Norm", "Gjr-Garch Sstd", "EWMA Norm", "EWMA Sstd", "apArch Norm", "apArch Sstd")
+
+# Tabela de criterio de informacao
 tb_InfoCriteria = tibble(Model = Models, fit = NA, Akaike = NA, Bayes = NA, Shibata=NA, HannanQuinn=NA)
 
 for (i in 1:length(fit)) {
   tb_InfoCriteria[i, -c(1,2)] = t(rugarch::infocriteria(fit[[i]]))
   tb_InfoCriteria[i, 2] = names(fit[i])
 }
+
+# Imprime a tabela de criterio de informacão
+print(tb_InfoCriteria)
 
 # *************** Rolling Window Estimation ***************
 
@@ -483,6 +467,5 @@ fit.mov5_60
 fit.mov5_252
 
 
-
-
+# Avaliacao de mudanca dos estimadores no tempo (fazer para o melhor previsor)
 

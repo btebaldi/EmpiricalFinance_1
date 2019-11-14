@@ -3,20 +3,14 @@ rm(list = ls())
 
 # Bibliotecas utilizadas
 library(dplyr)
-library(xts)
 library(dlm)
 library(ggplot2)
-# library(quantmod)
-library(ggExtra)
-library(cowplot)
 
 # carrega banco de dados
 load("./Ibovespa.RData")
 
+# Estatisticas descritivas
 summary(Ibov.data)
-
-# transforma em objeto xts (desnecessario???)
-# Ibov.xts <- xts(Ibov.data[,-1], order.by=Ibov.data$Date)
 
 # Ordena a base de dados (just in case)
 Ibov.data = Ibov.data %>% dplyr::arrange(Date) 
@@ -42,11 +36,9 @@ fit <- dlm::dlmMLE(y, c(a0,0), fn)
 mod <- fn(fit$par)
   
 obs.error.var <- V(mod)
-# [,1]
-# [1,] 0.003268212
 state.error.var <- W(mod)
-# [,1]
-# [1,] 0.004703001
+
+cat(sprintf("Observation error variance: %f\nState error variance: %f", obs.error.var, state.error.var))
 
 # Applies Kalman filter to compute filtered values of the state vectors,
 # together with their variance/covariance matrices
@@ -67,20 +59,17 @@ Ibov.data$mu = mu
 # Preenche os dados faltantes
 Ibov.data[is.na(Ibov.data$Close), "AdjClose"] = mu[is.na(Ibov.data$Close)]
 
+
+# Imprime grafico da serie 
 g.caption = sprintf("Bovespa Index from %s, to %s", min(Ibov.data$Date), max(Ibov.data$Date))
 
 ggplot(Ibov.data, aes(x = Date)) + 
   geom_line(aes(y=AdjClose)) + 
-  # geom_line(aes(y=Volume), colour = "Red")
   labs(title = "Bovespa Index",
        caption = g.caption,
        y = "Close",
        x = NULL)
 
-# p2 <- ggplot(Ibov.data, aes(Date, Volume)) + 
-#   geom_line(colour = "Red")
-# 
-# 
-# plot_grid(p1, p2, label_size = 12, nrow = 2, ncol = 1)
 
+# Salva os dados
 save(Ibov.data, file = "Ibovespa_SemBuracao.RData")

@@ -19,42 +19,31 @@ load("./Ibovespa_SemBuracao.RData")
 
 summary(Ibov.data)
 
-# g.caption = sprintf("Bovespa Index from %s, to %s", min(Ibov.data$Date), max(Ibov.data$Date))
-g.caption = "Source: Yahoo finance"
-
-ggplot(Ibov.data, aes(x = Date)) + 
-  geom_line(aes(y=AdjClose)) + 
-  # geom_line(aes(y=Volume), colour = "Red")
-  labs(title = "Bovespa Index",
-       caption = g.caption,
-       y = NULL,
-       x = NULL)
-
-ggsave("BovespaIndex_Level.png", plot = last_plot(), device = "png", path = "./trabalho",
-       scale = 2, width = 6, height = 3, units = "in",
-       dpi = 72)
-
-
+#  Calcula o retorno da serie
 Ibov.data$r_ibov = log(Ibov.data$AdjClose) - log(dplyr::lag(Ibov.data$AdjClose))
 
+# Desarta a primeira observação
 Ibov.data = Ibov.data[-1,]
 
+# Gera o grafico dos retornos
 g.caption = "Source: Yahoo finance"
 
-ggplot(Ibov.data, aes(x = Date)) + 
+g1 = ggplot(Ibov.data, aes(x = Date)) + 
   geom_line(aes(y=r_ibov)) + 
-  # geom_line(aes(y=Volume), colour = "Red")
   labs(title = "Bovespa Index",
        subtitle = "Daily retuns",
        caption = g.caption,
        y = NULL,
        x = NULL)
 
-ggsave("BovespaIndex_Dailyreturns.png", plot = last_plot(), device = "png", path = "./trabalho",
+ggsave("BovespaIndex_Dailyreturns.png", plot = g1, device = "png", path = "./Trabalho/Plots/",
        scale = 2, width = 6, height = 3, units = "in",
        dpi = 72)
 
+# remove o objeto de grafico da memoria
+rm(list = c("g1"))
 
+# Gera o grafico de ACF e PACF dos Retornos
 ACF_PACF = ggplot_Acf_Pacf(Ibov.data$r_ibov)
 
 plot_grid(ACF_PACF$ACF, ACF_PACF$PACF, label_size = 12, nrow = 2, ncol = 1)
@@ -383,7 +372,7 @@ r_ibov.xts = xts::xts(Ibov.data.rolling$r_ibov, order.by = Ibov.data.rolling$Dat
 
 # Determina qual o periodo de reestimacao
 # Expanding window recalculation every 5 days
-fit.mov5_5 = vector(mode = "list", length = length(models))
+  fit.mov5_5 = vector(mode = "list", length = length(models))
 names(fit.mov5_5) = names(models)
 for (i in 1:length(models)) {
   cat(sprintf("Fitting: %s\nTime frame: 5 years\n\n", names(fit.mov5_5[i])))
@@ -430,4 +419,58 @@ for (i in 1:length(models)) {
                                  refit.window = "moving",
                                  refit.every = 252)
 }
+
+
+# *************** Extracting Prediction Errors ***************
+
+# Declere a fucntion that will get the prediciton errors
+GetPredError = function(fit.model){
+  
+  # table with errors
+  tb_PredError = tibble(Model = Models,  fit = NA, MSE = NA, QL = NA)
+  
+  # cylce models
+  for (i in 1:length(models)) {
+    cat(sprintf("Calculating prediction error for: %s\n", names(fit.model[i])))
+    
+    # Get the predicitons and realized values.
+    preds <- as.data.frame(fit.model)
+    
+    # Prediction error for the mean
+    e <- preds$Realized - preds$Mu
+    
+    # Prediction error for the variance
+    d <- e^2 - preds$Sigma^2
+    
+    q <- e^2/preds$Sigma^2 - log(e^2/preds$Sigma^2)
+    
+    # Store prediction error in table
+    tb_PredError[i, "fit"] = names(fit.mov5_252[i])
+    tb_PredError[i, "MSE"] = names(mean(d^2))
+    tb_PredError[i, "QL"] = names(mean(q))
+  }
+  
+  # Return table
+  return(tb_PredError)
+}
+
+#  Faz o processo para todos os modelos.
+fit.roll_5
+fit.roll_20
+fit.roll_60
+fit.roll_252
+
+fit.mov2_5
+fit.mov2_20
+fit.mov2_60
+fit.mov2_252
+
+fit.mov5_5
+fit.mov5_20
+fit.mov5_60
+fit.mov5_252
+
+
+
+
 

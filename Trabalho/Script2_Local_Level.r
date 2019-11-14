@@ -7,7 +7,7 @@ library(dlm)
 library(ggplot2)
 
 # carrega banco de dados
-load("./Ibovespa.RData")
+load("./Trabalho/Database/Ibovespa.RData")
 
 # Estatisticas descritivas
 summary(Ibov.data)
@@ -61,15 +61,18 @@ Ibov.data[is.na(Ibov.data$Close), "AdjClose"] = mu[is.na(Ibov.data$Close)]
 
 
 # Imprime grafico da serie 
-g.caption = sprintf("Bovespa Index from %s, to %s", min(Ibov.data$Date), max(Ibov.data$Date))
+g.caption = "Source: Yahoo finance"
 
-ggplot(Ibov.data, aes(x = Date)) + 
+p1 = ggplot(Ibov.data, aes(x = Date)) + 
   geom_line(aes(y=AdjClose)) + 
   labs(title = "Bovespa Index",
        caption = g.caption,
-       y = "Close",
+       y = NULL,
        x = NULL)
 
+ggsave("BovespaIndex_Level.png", plot = p1, device = "png", path = "./Trabalho/Plots/",
+       scale = 2, width = 6, height = 3, units = "in",
+       dpi = 72)
 
 # Salva os dados
-save(Ibov.data, file = "Ibovespa_SemBuracao.RData")
+save(Ibov.data, file = "./Trabalho/Database/Ibovespa_SemBuracao.RData")

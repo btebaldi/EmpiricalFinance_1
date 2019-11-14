@@ -4,19 +4,17 @@ rm(list = ls())
 # Bibliotecas utilizadas
 library(dplyr)
 library(xts)
-# library(dlm)
 library(ggplot2)
-# # library(quantmod)
-# library(ggExtra)
 library(cowplot)
 library(TSA)
 library(rugarch)
 
-source("./ggplot_Acf_Pacf.R")
+source("./Trabalho/ggplot_Acf_Pacf.R")
 
 # carrega banco de dados
-load("./Ibovespa_SemBuracao.RData")
+load("./Trabalho/Database/Ibovespa_SemBuracao.RData")
 
+# Estatisticas descritivas
 summary(Ibov.data)
 
 #  Calcula o retorno da serie
@@ -40,24 +38,38 @@ ggsave("BovespaIndex_Dailyreturns.png", plot = g1, device = "png", path = "./Tra
        scale = 2, width = 6, height = 3, units = "in",
        dpi = 72)
 
-# remove o objeto de grafico da memoria
-rm(list = c("g1"))
-
 # Gera o grafico de ACF e PACF dos Retornos
 ACF_PACF = ggplot_Acf_Pacf(Ibov.data$r_ibov)
 
-plot_grid(ACF_PACF$ACF, ACF_PACF$PACF, label_size = 12, nrow = 2, ncol = 1)
+g1 = cowplot::plot_grid(ACF_PACF$ACF, ACF_PACF$PACF, label_size = 12, nrow = 2, ncol = 1)
 
+g1 = g1 + labs(title = "Bovespa Index",
+               subtitle = "Daily retuns",
+               caption = g.caption,
+               y = NULL,
+               x = NULL)
+
+ggsave("ACF_PACF.png", plot = g1, device = "png", path = "./Trabalho/Plots/",
+       scale = 1.5, width = 6, height = 3, units = "in",
+       dpi = 72)
+
+# remove o objeto de grafico da memoria
+rm(list = c("g1", "ACF_PACF"))
+
+# Determina modelos ARIMA para saber o comportamento da serie
 mdl.ARMA = arima(Ibov.data$r_ibov, order =  c(1, 0, 1), fixed = c(NA, NA, NA))
 mdl.AR = arima(Ibov.data$r_ibov, order =  c(1, 0, 0))
 mdl.MA = arima(Ibov.data$r_ibov, order =  c(0, 0, 1))
 mdl = arima(Ibov.data$r_ibov, order =  c(0, 0, 0))
 
-
+# Imprime (em tela) o AIC de cada modelo
 mdl.ARMA$aic
 mdl.AR$aic
 mdl.MA$aic
 mdl$aic
+
+cat(sprintf("ARMA(1,1) %7.2f\nARMA(1,0) %7.2f\nARMA(0,1) %7.2f\nARMA(0,0) %7.2f",
+            mdl.ARMA$aic, mdl.AR$aic, mdl.ARMA$aic, mdl$aic))
 
 
 # Fit GARCH MODELS

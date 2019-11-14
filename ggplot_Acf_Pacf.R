@@ -1,12 +1,12 @@
-ggplot_Acf_Pacf <- function(x){
+ggplot_Acf_Pacf <- function(x, lag.max = NULL){
   require(tibble)
   
   conf.level <- 0.95
   n = length(x)
   ciline <- qnorm((1 - conf.level)/2)/sqrt(n)
   
-  acf_1 = acf(x, plot = F)
-  pacf_1 = pacf(x, plot = F)
+  acf_1 = acf(x, plot = F, lag.max = lag.max)
+  pacf_1 = pacf(x, plot = F, lag.max = lag.max)
   
   acf_1_df =  tibble(lag = as.vector(acf_1$lag), ACF = as.vector(acf_1$acf)) 
   pacf_1_df =  tibble(lag = as.vector(pacf_1$lag), PACF = as.vector(pacf_1$acf)) 

@@ -7,10 +7,10 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 
-source("./ggplot_Acf_Pacf.R")
+source("./Trabalho/ggplot_Acf_Pacf.R")
 
 # carrega banco de dados
-Ibov.HF_data <- read_excel("Trabalho/IBOVESPA15m.xlsx")
+Ibov.HF_data <- read_excel("./Trabalho/Database/IBOVESPA15m.xlsx")
 colnames(Ibov.HF_data) = c("Data", "Hora", "Ano", "Mes", "Dia", "DiaSemana", "SeqHora", "Ibov"  )
 head(Ibov.HF_data)
 
@@ -31,17 +31,26 @@ plots = ggplot_Acf_Pacf(Ibov.HF_data$r_sq_Ibov[-1], 200)
 
 plots$ACF + 
   labs(title = "Bovespa Index",
-       subtitle = "Quadrado dos retornos intradiários",
+       subtitle = "Intraday squared returns",
        caption = "Source: EESP-FGV",
        y = "ACF",
        x = NULL)
 
+ggsave("BovespaIndex_IntradaySquaredReturns_ACF.png", plot = last_plot(), device = "png", path = "./Trabalho/Plots/",
+       scale = 2, width = 6, height = 3, units = "in",
+       dpi = 72)
+
 plots$PACF + 
   labs(title = "Bovespa Index",
-       subtitle = "Quadrado dos retornos intradiários",
+       subtitle = "Intraday squared returns",
        caption = "Source: EESP-FGV",
        y = "PACF",
        x = NULL)
+
+ggsave("BovespaIndex_IntradaySquaredReturns_PACF.png", plot = last_plot(), device = "png", path = "./Trabalho/Plots/",
+       scale = 2, width = 6, height = 3, units = "in",
+       dpi = 72)
+
 
 Ibov.HF_data.Wide = tidyr::pivot_wider(Ibov.HF_data,
                          id_cols = c("Ano", "Mes", "Dia", "DiaSemana", "SeqHora"),
@@ -60,10 +69,14 @@ Ibov.HF_data.Wide$VOLR = Ibov.HF_data.Wide$VR^0.5
 ggplot(Ibov.HF_data.Wide, aes(x = 1:nrow(Ibov.HF_data.Wide))) + 
   geom_line(aes(y=VOLR)) + 
   labs(title = "Bovespa Index",
-       subtitle = "Volatilidade realizada",
+       subtitle = "Realized volatility",
        caption = "Source: EESP-FGV",
        y = NULL,
        x=NULL)
 
+ggsave("BovespaIndex_RealizedVolatility.png", plot = last_plot(), device = "png", path = "./Trabalho/Plots/",
+       scale = 2, width = 6, height = 3, units = "in",
+       dpi = 72)
+
 # Salva os dados
-save(Ibov.HF_data.Wide, file = "Ibovespa_HighFreq.RData")
+save(Ibov.HF_data.Wide, file = "./Trabalho/Database/Ibovespa_HighFreq.RData")

@@ -24,6 +24,9 @@ summary(Ibov.HF_data)
 Ibov.HF_data$ln_Ibov = log(Ibov.HF_data$Ibov)
 Ibov.HF_data$r_Ibov = Ibov.HF_data$ln_Ibov - dplyr::lag(Ibov.HF_data$ln_Ibov)
 
+# Arruma a coluna de data
+Ibov.HF_data$Data = as.Date(Ibov.HF_data$Data)
+
 # Calcula o retorno ao quadrado
 Ibov.HF_data$r_sq_Ibov = Ibov.HF_data$r_Ibov^2
 
@@ -53,7 +56,7 @@ ggsave("BovespaIndex_IntradaySquaredReturns_PACF.png", plot = last_plot(), devic
 
 
 Ibov.HF_data.Wide = tidyr::pivot_wider(Ibov.HF_data,
-                         id_cols = c("Ano", "Mes", "Dia", "DiaSemana", "SeqHora"),
+                         id_cols = c("Data", "Ano", "Mes", "Dia", "DiaSemana", "SeqHora"),
                          names_from = SeqHora,
                          names_prefix = "Hora_",
                          names_repair = "check_unique",

@@ -298,6 +298,7 @@ r_ibov.xts = xts::xts(Ibov.data.rolling$r_ibov, order.by = Ibov.data.rolling$Dat
 
 # Determina qual o periodo de reestimacao
 # Expanding window recalculation every 5 days
+cat(sprintf("Time frame: 2 years\nRefit every 5 days\n"))
 fit.mov2_5 = vector(mode = "list", length = length(models))
 names(fit.mov2_5) = names(models)
 for (i in 1:length(models)) {
@@ -310,6 +311,7 @@ for (i in 1:length(models)) {
 }
 
 # Expanding window recalculation every 20 days
+cat(sprintf("Time frame: 2 years\nRefit every 20 days\n"))
 fit.mov2_20 = vector(mode = "list", length = length(models))
 names(fit.mov2_20) = names(models)
 for (i in 1:length(models)) {
@@ -322,6 +324,7 @@ for (i in 1:length(models)) {
 }
 
 # Expanding window recalculation every 60 days
+cat(sprintf("Time frame: 2 years\nRefit every 60 days\n"))
 fit.mov2_60 = vector(mode = "list", length = length(models))
 names(fit.mov2_60) = names(models)
 for (i in 1:length(models)) {
@@ -335,6 +338,7 @@ for (i in 1:length(models)) {
 
 
 # Expanding window recalculation every 252 days
+cat(sprintf("Time frame: 2 years\nRefit every 252 days\n"))
 fit.mov2_252 = vector(mode = "list", length = length(models))
 names(fit.mov2_252) = names(models)
 for (i in 1:length(models)) {
@@ -366,12 +370,14 @@ r_ibov.xts = xts::xts(Ibov.data.rolling$r_ibov, order.by = Ibov.data.rolling$Dat
 # a moving window where all previous data is used for the first estimation and then 
 # moved by a length equal to refit.every (unless the window.size option is used instead).
 
+
 # Determina qual o periodo de reestimacao
 # Expanding window recalculation every 5 days
-  fit.mov5_5 = vector(mode = "list", length = length(models))
+cat(sprintf("Time frame: 5 years\nRefit every 5 days\n"))
+fit.mov5_5 = vector(mode = "list", length = length(models))
 names(fit.mov5_5) = names(models)
 for (i in 1:length(models)) {
-  cat(sprintf("Fitting: %s\nTime frame: 5 years\n\n", names(fit.mov5_5[i])))
+  cat(sprintf("Fitting: %s\n", names(fit.mov5_5[i])))
   fit.mov5_5[[i]] = ugarchroll(spec = models[[i]],
                                data = r_ibov.xts,
                                n.start = n.startForecast,
@@ -380,10 +386,11 @@ for (i in 1:length(models)) {
 }
 
 # Expanding window recalculation every 20 days
+cat(sprintf("Time frame: 5 years\nRefit every 20 days\n"))
 fit.mov5_20 = vector(mode = "list", length = length(models))
 names(fit.mov5_20) = names(models)
 for (i in 1:length(models)) {
-  cat(sprintf("Fitting: %s\nTime frame: 5 years\n\n",names(fit.mov5_20[i])))
+  cat(sprintf("Fitting: %s\n", names(fit.mov5_20[i])))
   fit.mov5_20[[i]] = ugarchroll(spec = models[[i]],
                                 data = r_ibov.xts,
                                 n.start = n.startForecast,
@@ -392,10 +399,11 @@ for (i in 1:length(models)) {
 }
 
 # Expanding window recalculation every 60 days
+cat(sprintf("Time frame: 5 years\nRefit every 60 days\n"))
 fit.mov5_60 = vector(mode = "list", length = length(models))
 names(fit.mov5_60) = names(models)
 for (i in 1:length(models)) {
-  cat(sprintf("Fitting: %s\nTime frame: 5 years\n\n",names(fit.mov5_60[i])))
+  cat(sprintf("Fitting: %s\n", names(fit.mov5_60[i])))
   fit.mov5_60[[i]] = ugarchroll(spec = models[[i]],
                                 data = r_ibov.xts,
                                 n.start = n.startForecast,
@@ -405,10 +413,11 @@ for (i in 1:length(models)) {
 
 
 # Expanding window recalculation every 252 days
+cat(sprintf("Time frame: 5 years\nRefit every 252 days\n"))
 fit.mov5_252 = vector(mode = "list", length = length(models))
 names(fit.mov5_252) = names(models)
 for (i in 1:length(models)) {
-  cat(sprintf("Fitting: %s\n",names(fit.mov5_252[i])))
+  cat(sprintf("Fitting: %s\n", names(fit.mov5_252[i])))
   fit.mov5_252[[i]] = ugarchroll(spec = models[[i]],
                                  data = r_ibov.xts,
                                  n.start = n.startForecast,
@@ -416,56 +425,18 @@ for (i in 1:length(models)) {
                                  refit.every = 252)
 }
 
-
-# *************** Extracting Prediction Errors ***************
-
-# Declere a fucntion that will get the prediciton errors
-GetPredError = function(fit.model){
-  
-  # table with errors
-  tb_PredError = tibble(Model = Models,  fit = NA, MSE = NA, QL = NA)
-  
-  # cylce models
-  for (i in 1:length(models)) {
-    cat(sprintf("Calculating prediction error for: %s\n", names(fit.model[i])))
-    
-    # Get the predicitons and realized values.
-    preds <- as.data.frame(fit.model)
-    
-    # Prediction error for the mean
-    e <- preds$Realized - preds$Mu
-    
-    # Prediction error for the variance
-    d <- e^2 - preds$Sigma^2
-    
-    q <- e^2/preds$Sigma^2 - log(e^2/preds$Sigma^2)
-    
-    # Store prediction error in table
-    tb_PredError[i, "fit"] = names(fit.mov5_252[i])
-    tb_PredError[i, "MSE"] = names(mean(d^2))
-    tb_PredError[i, "QL"] = names(mean(q))
-  }
-  
-  # Return table
-  return(tb_PredError)
-}
-
-#  Faz o processo para todos os modelos.
-fit.roll_5
-fit.roll_20
-fit.roll_60
-fit.roll_252
-
-fit.mov2_5
-fit.mov2_20
-fit.mov2_60
-fit.mov2_252
-
-fit.mov5_5
-fit.mov5_20
-fit.mov5_60
-fit.mov5_252
-
-
-# Avaliacao de mudanca dos estimadores no tempo (fazer para o melhor previsor)
+# Save all models forecast
+save(fit.roll_5,
+     fit.roll_20,
+     fit.roll_60,
+     fit.roll_252,
+     fit.mov2_5,
+     fit.mov2_20,
+     fit.mov2_60,
+     fit.mov2_252,
+     fit.mov5_5,
+     fit.mov5_20,
+     fit.mov5_60,
+     fit.mov5_252,
+     file = "./Trabalho/Database/GarchFrecast.RData")
 

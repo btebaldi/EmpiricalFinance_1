@@ -152,6 +152,8 @@ models$apArch.sstd = ugarchspec(mean.model=list(armaOrder=c(0,0)),
                   distribution.model="sstd")
 
 
+# Save the models
+save(models, Ibov.data, file = "./Trabalho/Database/GarchModels.RData")
 
 # Faz a selecao dos dados para estimação (< 2013)
 Ibov.data.InSample = Ibov.data %>% dplyr::filter(Date < "2013-01-01")

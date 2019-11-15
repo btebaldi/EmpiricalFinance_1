@@ -438,5 +438,5 @@ save(fit.roll_5,
      fit.mov5_20,
      fit.mov5_60,
      fit.mov5_252,
-     file = "./Trabalho/Database/GarchFrecast.RData")
+     file = "./Trabalho/Database/GarchForecast.RData")
 

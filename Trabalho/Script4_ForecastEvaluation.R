@@ -5,13 +5,7 @@ rm(list = ls())
 library(tibble)
 library(dplyr)
 library(tidyr)
-# library(xts)
-# library(ggplot2)
-# library(cowplot)
-# library(TSA)
 library(rugarch)
-
-# source("./Trabalho/ggplot_Acf_Pacf.R")
 
 # Load data
 load("./Trabalho/Database/GarchForecast.RData")
@@ -57,7 +51,7 @@ GetPredError = function(fit.model){
       tb_PredError[i, "MSE"] = mean(d^2)
       tb_PredError[i, "QL"] = mean(q)
     }
-    tb_PredError[i, "fit"] = names(fit.mov5_252[i])
+    tb_PredError[i, "fit"] = names(fit.model[i])
   }
   
   # Return table

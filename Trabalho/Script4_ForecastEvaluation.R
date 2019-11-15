@@ -14,7 +14,7 @@ library(rugarch)
 # source("./Trabalho/ggplot_Acf_Pacf.R")
 
 # Load data
-load("./GitHub/EmpiricalFinance_1/Trabalho/Database/GarchFrecast.RData")
+load("./Trabalho/Database/GarchForecast.RData")
 
 # Declara uma funcao para extrair e calcular os erros de previsao
 GetPredError = function(fit.model){
@@ -76,13 +76,73 @@ for (str in variableNames) {
   mdl = get(str)
   cat(sprintf("Model: %s\n", str))
   tbl_2 = GetPredError(mdl)
-  tbl_2$ModelName = str
-  
+  str_split = strsplit(str, "_")
+  tbl_2$EstimationName = str_split[[1]][1]
+  tbl_2$Restimation = as.numeric(str_split[[1]][2])
   tbl = rbind(tbl, tbl_2)
 }
+rm(list = c("str", "tbl_2", "mdl", "str_split"))
 
-rm(list = )
+tbl$MSE = tbl$MSE * 1e7
 
-tidyr::pivot_wider(tbl)
+for (i in 1:nrow(tbl)) {
+  tbl[i,c("ModelName", "Distribution")] = unlist(strsplit(tbl[[i, "fit"]], "\\."))    
+}
 
-# Avaliacao de mudanca dos estimadores no tempo (fazer para o melhor previsor)
+
+# Comparacao de Normal vs t-student in fit.roll
+tbl_temp = tbl %>% dplyr::filter(EstimationName == "fit.roll") %>% tidyr::pivot_wider(id_cols=c("fit"),
+                                                                      names_from = "Restimation",
+                                                                      names_prefix = "Rest_",
+                                                                      names_repair = "check_unique",
+                                                                      values_from = MSE)
+write.table(tbl_temp , file = "./Trabalho/Tables/Table1_MSE.csv")
+print(tbl_temp)
+
+tbl_temp = tbl %>% dplyr::filter(EstimationName == "fit.roll") %>% tidyr::pivot_wider(id_cols=c("fit"),
+                                                                      names_from = "Restimation",
+                                                                      names_prefix = "Rest_",
+                                                                      names_repair = "check_unique",
+                                                                      values_from = QL)
+
+write.table(tbl_temp , file = "./Trabalho/Tables/Table1_QL.csv")
+print(tbl_temp)
+
+# Comparação do metodo expanding vs moving usando Normal
+tbl_temp = tbl %>% dplyr::filter(Distribution == "norm", Restimation ==5) %>% tidyr::pivot_wider(id_cols=c("ModelName"),
+                                                                     names_from = "EstimationName",
+                                                                     names_prefix = NULL,
+                                                                     names_repair = "check_unique",
+                                                                     values_from = MSE)
+
+write.table(tbl_temp , file = "./Trabalho/Tables/Table2_MSE.csv")
+print(tbl_temp)
+
+tbl_temp = tbl %>% dplyr::filter(Distribution == "norm", Restimation ==5) %>% tidyr::pivot_wider(id_cols=c("ModelName"),
+                                                                                                 names_from = "EstimationName",
+                                                                                                 names_prefix = NULL,
+                                                                                                 names_repair = "check_unique",
+                                                                                                 values_from = QL)
+write.table(tbl_temp , file = "./Trabalho/Tables/Table2_QL.csv")
+print(tbl_temp)
+
+# Comparação do metodo expanding vs moving usando t-Student
+tbl_temp = tbl %>% dplyr::filter(Distribution == "sstd", Restimation ==5) %>% tidyr::pivot_wider(id_cols=c("ModelName"),
+                                                                                                 names_from = "EstimationName",
+                                                                                                 names_prefix = NULL,
+                                                                                                 names_repair = "check_unique",
+                                                                                                 values_from = MSE)
+write.table(tbl_temp , file = "./Trabalho/Tables/Table2_MSE_sstd.csv")
+print(tbl_temp)
+
+tbl_temp = tbl %>% dplyr::filter(Distribution == "sstd", Restimation ==5) %>% tidyr::pivot_wider(id_cols=c("ModelName"),
+                                                                                                 names_from = "EstimationName",
+                                                                                                 names_prefix = NULL,
+                                                                                                 names_repair = "check_unique",
+                                                                                                 values_from = QL)
+write.table(tbl_temp , file = "./Trabalho/Tables/Table2_QL_sstd.csv")
+print(tbl_temp)
+
+# Salva a tabela completa em CSV
+write.table(tbl , file = "./Trabalho/Tables/Table3_overall.csv")
+print(tbl)

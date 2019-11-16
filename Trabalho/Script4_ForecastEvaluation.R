@@ -85,58 +85,132 @@ for (i in 1:nrow(tbl)) {
 
 
 # Comparacao de Normal vs t-student in fit.roll
-tbl_temp = tbl %>% dplyr::filter(EstimationName == "fit.roll") %>% tidyr::pivot_wider(id_cols=c("fit"),
-                                                                      names_from = "Restimation",
-                                                                      names_prefix = "Rest_",
-                                                                      names_repair = "check_unique",
-                                                                      values_from = MSE)
-write.table(tbl_temp , file = "./Trabalho/Tables/Table1_MSE.csv")
+tbl_temp = tbl %>% dplyr::filter(EstimationName == "fit.roll", Restimation ==252) %>% 
+  tidyr::pivot_wider(id_cols=c("ModelName"),
+                     names_from = "Distribution",
+                     names_prefix = "",
+                     names_repair = "check_unique",
+                     values_from = MSE)
 print(tbl_temp)
+write.table(tbl_temp , file = "./Trabalho/Tables/Table1_MSE_252.csv")
 
-tbl_temp = tbl %>% dplyr::filter(EstimationName == "fit.roll") %>% tidyr::pivot_wider(id_cols=c("fit"),
-                                                                      names_from = "Restimation",
-                                                                      names_prefix = "Rest_",
-                                                                      names_repair = "check_unique",
-                                                                      values_from = QL)
 
-write.table(tbl_temp , file = "./Trabalho/Tables/Table1_QL.csv")
+tbl_temp = tbl %>% dplyr::filter(EstimationName == "fit.roll", Restimation ==252) %>%
+  tidyr::pivot_wider(id_cols=c("ModelName"),
+                     names_from = "Distribution",
+                     names_prefix = "",
+                     names_repair = "check_unique",
+                     values_from = QL)
+
 print(tbl_temp)
+write.table(tbl_temp , file = "./Trabalho/Tables/Table1_QL_252.csv")
+
+
+
+# Comparacao de Normal vs t-student in fit.roll
+tbl_temp = tbl %>% dplyr::filter(EstimationName == "fit.roll", Restimation ==5) %>% 
+  tidyr::pivot_wider(id_cols=c("ModelName"),
+                     names_from = "Distribution",
+                     names_prefix = "",
+                     names_repair = "check_unique",
+                     values_from = MSE)
+print(tbl_temp)
+write.table(tbl_temp , file = "./Trabalho/Tables/Table1_MSE_5.csv")
+
+
+tbl_temp = tbl %>% dplyr::filter(EstimationName == "fit.roll", Restimation ==5) %>%
+  tidyr::pivot_wider(id_cols=c("ModelName"),
+                     names_from = "Distribution",
+                     names_prefix = "",
+                     names_repair = "check_unique",
+                     values_from = QL)
+
+print(tbl_temp)
+write.table(tbl_temp , file = "./Trabalho/Tables/Table1_QL_5.csv")
+
 
 # Comparação do metodo expanding vs moving usando Normal
-tbl_temp = tbl %>% dplyr::filter(Distribution == "norm", Restimation ==5) %>% tidyr::pivot_wider(id_cols=c("ModelName"),
-                                                                     names_from = "EstimationName",
-                                                                     names_prefix = NULL,
-                                                                     names_repair = "check_unique",
-                                                                     values_from = MSE)
+tbl_temp = tbl %>% dplyr::filter(Distribution == "norm", Restimation ==5) %>%
+  tidyr::pivot_wider(id_cols=c("ModelName"),
+                     names_from = "EstimationName",
+                     names_prefix = NULL,
+                     names_repair = "check_unique",
+                     values_from = MSE)
 
 write.table(tbl_temp , file = "./Trabalho/Tables/Table2_MSE.csv")
 print(tbl_temp)
 
-tbl_temp = tbl %>% dplyr::filter(Distribution == "norm", Restimation ==5) %>% tidyr::pivot_wider(id_cols=c("ModelName"),
-                                                                                                 names_from = "EstimationName",
-                                                                                                 names_prefix = NULL,
-                                                                                                 names_repair = "check_unique",
-                                                                                                 values_from = QL)
+tbl_temp = tbl %>% dplyr::filter(Distribution == "norm", Restimation ==5) %>%
+  tidyr::pivot_wider(id_cols=c("ModelName"),
+                     names_from = "EstimationName",
+                     names_prefix = NULL,
+                     names_repair = "check_unique",
+                     values_from = QL)
 write.table(tbl_temp , file = "./Trabalho/Tables/Table2_QL.csv")
 print(tbl_temp)
 
 # Comparação do metodo expanding vs moving usando t-Student
-tbl_temp = tbl %>% dplyr::filter(Distribution == "sstd", Restimation ==5) %>% tidyr::pivot_wider(id_cols=c("ModelName"),
-                                                                                                 names_from = "EstimationName",
-                                                                                                 names_prefix = NULL,
-                                                                                                 names_repair = "check_unique",
-                                                                                                 values_from = MSE)
+tbl_temp = tbl %>% dplyr::filter(Distribution == "sstd", Restimation ==5) %>%
+  tidyr::pivot_wider(id_cols=c("ModelName"),
+                     names_from = "EstimationName",
+                     names_prefix = NULL,
+                     names_repair = "check_unique",
+                     values_from = MSE)
 write.table(tbl_temp , file = "./Trabalho/Tables/Table2_MSE_sstd.csv")
 print(tbl_temp)
 
-tbl_temp = tbl %>% dplyr::filter(Distribution == "sstd", Restimation ==5) %>% tidyr::pivot_wider(id_cols=c("ModelName"),
-                                                                                                 names_from = "EstimationName",
-                                                                                                 names_prefix = NULL,
-                                                                                                 names_repair = "check_unique",
-                                                                                                 values_from = QL)
+tbl_temp = tbl %>% dplyr::filter(Distribution == "sstd", Restimation ==5) %>%
+  tidyr::pivot_wider(id_cols=c("ModelName"),
+                     names_from = "EstimationName",
+                     names_prefix = NULL,
+                     names_repair = "check_unique",
+                     values_from = QL)
 write.table(tbl_temp , file = "./Trabalho/Tables/Table2_QL_sstd.csv")
 print(tbl_temp)
 
 # Salva a tabela completa em CSV
 write.table(tbl , file = "./Trabalho/Tables/Table3_overall.csv")
 print(tbl)
+
+
+
+# Comparação do metodo expanding vs moving usando Normal
+tbl_temp = tbl %>% dplyr::filter(Distribution == "norm", Restimation ==252) %>%
+  tidyr::pivot_wider(id_cols=c("ModelName"),
+                     names_from = "EstimationName",
+                     names_prefix = NULL,
+                     names_repair = "check_unique",
+                     values_from = MSE)
+
+write.table(tbl_temp , file = "./Trabalho/Tables/Table2_MSE_252.csv")
+print(tbl_temp)
+
+tbl_temp = tbl %>% dplyr::filter(Distribution == "norm", Restimation ==252) %>%
+  tidyr::pivot_wider(id_cols=c("ModelName"),
+                     names_from = "EstimationName",
+                     names_prefix = NULL,
+                     names_repair = "check_unique",
+                     values_from = QL)
+write.table(tbl_temp , file = "./Trabalho/Tables/Table2_QL_252.csv")
+print(tbl_temp)
+
+
+# Comparacao de parameter reestimation
+tbl_temp = tbl %>% dplyr::filter(Distribution == "norm", EstimationName=="fit.mov5") %>% 
+  tidyr::pivot_wider(id_cols=c("ModelName"),
+                     names_from = "Restimation",
+                     names_prefix = "",
+                     names_repair = "check_unique",
+                     values_from = MSE)
+print(tbl_temp)
+write.table(tbl_temp , file = "./Trabalho/Tables/Table4_MSE.csv")
+
+tbl_temp = tbl %>% dplyr::filter(Distribution == "norm", EstimationName=="fit.mov5") %>% 
+  tidyr::pivot_wider(id_cols=c("ModelName"),
+                     names_from = "Restimation",
+                     names_prefix = "",
+                     names_repair = "check_unique",
+                     values_from = QL)
+print(tbl_temp)
+write.table(tbl_temp , file = "./Trabalho/Tables/Table4_QL.csv")
+

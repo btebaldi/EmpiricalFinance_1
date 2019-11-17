@@ -215,6 +215,8 @@ for (i in 1:length(fit)) {
 
 # Imprime a tabela de criterio de informacão
 print(tb_InfoCriteria)
+write.table(tb_InfoCriteria, file = "./Trabalho/Tables/Table0_InfoCriteria.csv")
+
 
 # *************** Rolling Window Estimation ***************
 

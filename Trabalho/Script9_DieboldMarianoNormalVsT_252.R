@@ -8,8 +8,6 @@ library(tidyr)
 library(rugarch)
 library(forecast)
 
-
-
 # Load data
 load("./Trabalho/Database/GarchForecast.RData")
 
